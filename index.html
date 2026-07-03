@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PaceIQ — race predictor</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">P</span>
+      <span class="brand-name">PaceIQ</span>
+    </div>
+    <div id="status-pill" class="status-pill status-pill--offline">Not connected</div>
+  </header>
+
+  <main>
+
+    <section id="connect-section" class="hero">
+      <p class="eyebrow">Race predictor &amp; training dashboard</p>
+      <h1>Turn your Strava history into real training insight</h1>
+      <p class="hero-sub">
+        Connect your Strava account to sync your full run history, extract
+        best efforts, and see training load, consistency, and race
+        predictions Strava doesn't show you for free.
+      </p>
+      <button id="connect-btn" class="strava-btn">
+        <svg viewBox="0 0 24 24" class="strava-icon" aria-hidden="true">
+          <path fill="currentColor" d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/>
+        </svg>
+        Connect with Strava
+      </button>
+      <p id="connect-error" class="error-msg" hidden></p>
+    </section>
+
+    <section id="dashboard-section" class="dashboard" hidden>
+
+      <div class="sync-row">
+        <button id="sync-btn" class="secondary-btn">Sync Strava data</button>
+        <span id="sync-status" class="sync-status"></span>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-card">
+          <p class="stat-label">Runs synced</p>
+          <p class="stat-value" id="stat-runs">—</p>
+        </div>
+        <div class="stat-card">
+          <p class="stat-label">Total distance</p>
+          <p class="stat-value" id="stat-distance">—</p>
+        </div>
+        <div class="stat-card">
+          <p class="stat-label">Elevation gain</p>
+          <p class="stat-value" id="stat-elevation">—</p>
+        </div>
+        <div class="stat-card">
+          <p class="stat-label">Everest count</p>
+          <p class="stat-value" id="stat-everest">—</p>
+        </div>
+        <div class="stat-card">
+          <p class="stat-label">Best predictor pace</p>
+          <p class="stat-value" id="stat-pace">—</p>
+        </div>
+      </div>
+
+      <div class="panel">
+        <p class="panel-title">Training load</p>
+        <p class="panel-sub">
+          Acute:chronic workload ratio — a general indicator some coaches use
+          to spot sudden training spikes. Informational only, not medical advice.
+        </p>
+        <div class="load-row">
+          <div>
+            <p class="stat-label">7-day avg</p>
+            <p class="stat-value" id="load-acute">—</p>
+          </div>
+          <div>
+            <p class="stat-label">28-day avg</p>
+            <p class="stat-value" id="load-chronic">—</p>
+          </div>
+          <div>
+            <p class="stat-label">Ratio</p>
+            <p class="stat-value" id="load-ratio">—</p>
+          </div>
+          <div>
+            <p class="stat-label">Status</p>
+            <span class="load-badge load-badge--neutral" id="load-status">—</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <p class="panel-title">Weekly trend</p>
+        <p class="panel-sub">Mileage and average pace, last 12 weeks</p>
+        <div class="chart-wrap">
+          <canvas id="trend-chart"></canvas>
+        </div>
+      </div>
+
+      <div class="panel">
+        <p class="panel-title">Consistency</p>
+        <p class="panel-sub">Daily mileage, last 18 weeks</p>
+        <div class="heatmap-grid" id="heatmap-grid"></div>
+      </div>
+
+      <div class="panel">
+        <p class="panel-title">Training mix, last 30 days</p>
+        <p class="panel-sub">Share of runs at easy effort vs. tempo/threshold or faster, relative to your best recent pace</p>
+        <div class="effort-bar">
+          <div class="effort-bar-fill effort-bar-fill--easy" id="effort-easy-bar"></div>
+          <div class="effort-bar-fill effort-bar-fill--hard" id="effort-hard-bar"></div>
+        </div>
+        <div class="effort-legend">
+          <span id="effort-easy-label">Easy —</span>
+          <span id="effort-hard-label">Hard —</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <p class="panel-title">Predicted race times</p>
+        <p class="panel-sub">Based on your fastest qualifying run, using the Riegel formula</p>
+        <div class="predict-grid">
+          <div class="predict-card">
+            <p class="predict-label">5K</p>
+            <p class="predict-value" id="predict-5k">—</p>
+          </div>
+          <div class="predict-card">
+            <p class="predict-label">10K</p>
+            <p class="predict-value" id="predict-10k">—</p>
+          </div>
+          <div class="predict-card">
+            <p class="predict-label">Half marathon</p>
+            <p class="predict-value" id="predict-half">—</p>
+          </div>
+          <div class="predict-card">
+            <p class="predict-label">Marathon</p>
+            <p class="predict-value" id="predict-full">—</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <p class="panel-title">Personal bests</p>
+        <p class="panel-sub">Your fastest recorded times at each distance, pulled directly from your run history</p>
+        <div class="predict-grid">
+          <div class="predict-card">
+            <p class="predict-label">5K</p>
+            <p class="predict-value" id="best-5k">—</p>
+          </div>
+          <div class="predict-card">
+            <p class="predict-label">10K</p>
+            <p class="predict-value" id="best-10k">—</p>
+          </div>
+          <div class="predict-card">
+            <p class="predict-label">Half marathon</p>
+            <p class="predict-value" id="best-half">—</p>
+          </div>
+          <div class="predict-card">
+            <p class="predict-label">Marathon</p>
+            <p class="predict-value" id="best-full">—</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <p class="panel-title">Recent runs</p>
+        <p class="panel-sub">Most recent activities from your synced history</p>
+        <table class="runs-table" id="runs-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Name</th>
+              <th>Distance</th>
+              <th>Time</th>
+              <th>Pace</th>
+            </tr>
+          </thead>
+          <tbody id="runs-tbody">
+          </tbody>
+        </table>
+      </div>
+
+    </section>
+
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
