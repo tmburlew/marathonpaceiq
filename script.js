@@ -25,6 +25,26 @@ const filterEnd = document.getElementById("filter-end");
 const customRangeFields = document.getElementById("custom-range-fields");
 const filterReset = document.getElementById("filter-reset");
 const filterSummary = document.getElementById("filter-summary");
+const maxHrInput = document.getElementById("max-hr-input");
+
+const MAX_HR_STORAGE_KEY = "paceiq_max_hr";
+
+function getMaxHR() {
+  const stored = localStorage.getItem(MAX_HR_STORAGE_KEY);
+  const parsed = stored ? parseInt(stored, 10) : null;
+  return parsed && parsed > 0 ? parsed : null;
+}
+
+maxHrInput.value = getMaxHR() || "";
+maxHrInput.addEventListener("change", () => {
+  const value = parseInt(maxHrInput.value, 10);
+  if (value > 0) {
+    localStorage.setItem(MAX_HR_STORAGE_KEY, String(value));
+  } else {
+    localStorage.removeItem(MAX_HR_STORAGE_KEY);
+  }
+  renderAll();
+});
 
 filterRange.addEventListener("change", () => {
   customRangeFields.hidden = filterRange.value !== "custom";
@@ -400,27 +420,59 @@ function renderTrainingLoad(runs) {
 
 // ---------- Training mix (easy vs. hard) ----------
 
+// A run counts as "hard" if its average heart rate is at or above 80% of max
+// HR (roughly the top of aerobic/tempo, i.e. threshold effort and above).
+// This is a per-run average, so it has the same "smears out warmups" caveat
+// as the pace fallback below -- just a much better signal, since HR reflects
+// actual physiological effort rather than speed alone.
+const HR_HARD_THRESHOLD_PCT = 0.80;
+
+// Pace-based fallback for runs with no recorded heart rate (e.g. no HR strap
+// that day). Anchored to your all-time best qualifying effort so the
+// definition of "hard" doesn't shift depending on which runs are in view.
+const PACE_HARD_MULTIPLIER = 1.15;
+
 function computeEffortMix(runs) {
-  const best = findBestPredictorRun(runs);
-  if (!best) return null;
-
-  const thresholdPaceSecPerMile = best.moving_time / (best.distance / 1609.34);
-  const hardCutoff = thresholdPaceSecPerMile * 1.15;
-
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
   const recent = runs.filter(r => new Date(r.start_date) >= thirtyDaysAgo && r.distance > 0);
   if (recent.length === 0) return null;
 
+  const maxHR = getMaxHR();
+
+  const best = findBestPredictorRun(allRuns);
+  const hardCutoffPace = best
+    ? (best.moving_time / (best.distance / 1609.34)) * PACE_HARD_MULTIPLIER
+    : null;
+
   let hard = 0;
+  let usedHR = 0;
+  let classified = 0;
+
   recent.forEach(r => {
-    const pace = r.moving_time / (r.distance / 1609.34);
-    if (pace <= hardCutoff) hard++;
+    if (maxHR && r.average_heartrate) {
+      usedHR++;
+      classified++;
+      if (r.average_heartrate / maxHR >= HR_HARD_THRESHOLD_PCT) hard++;
+    } else if (hardCutoffPace) {
+      classified++;
+      const pace = r.moving_time / (r.distance / 1609.34);
+      if (pace <= hardCutoffPace) hard++;
+    }
   });
 
-  const easyPct = Math.round(((recent.length - hard) / recent.length) * 100);
-  return { easyPct, hardPct: 100 - easyPct };
+  if (classified === 0) return null;
+
+  const easyPct = Math.round(((classified - hard) / classified) * 100);
+  return {
+    easyPct,
+    hardPct: 100 - easyPct,
+    usedHR,
+    classified,
+    total: recent.length,
+    hasMaxHR: !!maxHR
+  };
 }
 
 function renderEffortMix(runs) {
@@ -429,12 +481,14 @@ function renderEffortMix(runs) {
   const hardBar = document.getElementById("effort-hard-bar");
   const easyLabel = document.getElementById("effort-easy-label");
   const hardLabel = document.getElementById("effort-hard-label");
+  const methodNote = document.getElementById("effort-method-note");
 
   if (!mix) {
     easyBar.style.width = "0%";
     hardBar.style.width = "0%";
     easyLabel.textContent = "Not enough recent runs";
     hardLabel.textContent = "";
+    methodNote.textContent = "";
     return;
   }
 
@@ -442,6 +496,14 @@ function renderEffortMix(runs) {
   hardBar.style.width = `${mix.hardPct}%`;
   easyLabel.textContent = `Easy ${mix.easyPct}%`;
   hardLabel.textContent = `Hard ${mix.hardPct}%`;
+
+  if (!mix.hasMaxHR) {
+    methodNote.textContent = `Enter your max HR above for more accurate zones. Currently estimated from pace for all ${mix.classified} runs.`;
+  } else if (mix.usedHR < mix.total) {
+    methodNote.textContent = `${mix.usedHR} of ${mix.total} runs used heart rate; the rest were estimated from pace (no HR data recorded).`;
+  } else {
+    methodNote.textContent = `Based on heart rate data from all ${mix.usedHR} runs.`;
+  }
 }
 
 // ---------- Weekly trend chart ----------
