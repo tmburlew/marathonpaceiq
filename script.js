@@ -1,7 +1,7 @@
 // ---- EDIT THIS BEFORE DEPLOYING ----
 // Your Strava Client ID is public (not secret), safe to hardcode here.
 // Get it from https://www.strava.com/settings/api
-const STRAVA_CLIENT_ID = "YOUR_STRAVA_CLIENT_ID";
+const STRAVA_CLIENT_ID = "262520";
 // -------------------------------------
 
 const REDIRECT_URI = `${window.location.origin}/api/callback`;
