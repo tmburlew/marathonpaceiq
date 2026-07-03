@@ -74,9 +74,9 @@ body {
 }
 
 main {
-  max-width: 880px;
+  max-width: 1280px;
   margin: 0 auto;
-  padding: 0 24px;
+  padding: 0 32px;
 }
 
 .hero {
@@ -142,7 +142,24 @@ main {
 }
 
 .dashboard {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  align-items: start;
   padding-bottom: 80px;
+}
+
+.dashboard > .sync-row,
+.dashboard > .filters-row,
+.dashboard > .filter-summary,
+.dashboard > .stat-row {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 900px) {
+  .dashboard {
+    grid-template-columns: 1fr;
+  }
 }
 
 .stat-row {
@@ -177,7 +194,17 @@ main {
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 24px;
-  margin-bottom: 20px;
+  grid-column: 1 / -1;
+}
+
+.panel--half {
+  grid-column: span 1;
+}
+
+@media (max-width: 900px) {
+  .panel--half {
+    grid-column: 1 / -1;
+  }
 }
 
 .panel-title {

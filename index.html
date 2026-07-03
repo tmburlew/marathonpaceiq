@@ -104,7 +104,7 @@
         </div>
       </div>
 
-      <div class="panel">
+      <div class="panel panel--half">
         <p class="panel-title">Training load</p>
         <p class="panel-sub">
           Acute:chronic workload ratio — a general indicator some coaches use
@@ -130,6 +130,19 @@
         </div>
       </div>
 
+      <div class="panel panel--half">
+        <p class="panel-title">Training mix, last 30 days</p>
+        <p class="panel-sub">Share of runs at easy effort vs. tempo/threshold or faster, relative to your best recent pace</p>
+        <div class="effort-bar">
+          <div class="effort-bar-fill effort-bar-fill--easy" id="effort-easy-bar"></div>
+          <div class="effort-bar-fill effort-bar-fill--hard" id="effort-hard-bar"></div>
+        </div>
+        <div class="effort-legend">
+          <span id="effort-easy-label">Easy —</span>
+          <span id="effort-hard-label">Hard —</span>
+        </div>
+      </div>
+
       <div class="panel">
         <p class="panel-title">Weekly trend</p>
         <p class="panel-sub">Mileage and average pace, last 12 weeks</p>
@@ -144,20 +157,7 @@
         <div class="heatmap-grid" id="heatmap-grid"></div>
       </div>
 
-      <div class="panel">
-        <p class="panel-title">Training mix, last 30 days</p>
-        <p class="panel-sub">Share of runs at easy effort vs. tempo/threshold or faster, relative to your best recent pace</p>
-        <div class="effort-bar">
-          <div class="effort-bar-fill effort-bar-fill--easy" id="effort-easy-bar"></div>
-          <div class="effort-bar-fill effort-bar-fill--hard" id="effort-hard-bar"></div>
-        </div>
-        <div class="effort-legend">
-          <span id="effort-easy-label">Easy —</span>
-          <span id="effort-hard-label">Hard —</span>
-        </div>
-      </div>
-
-      <div class="panel">
+      <div class="panel panel--half">
         <p class="panel-title">Predicted race times</p>
         <p class="panel-sub">Based on your fastest qualifying run, using the Riegel formula</p>
         <div class="predict-grid">
@@ -180,9 +180,9 @@
         </div>
       </div>
 
-      <div class="panel">
+      <div class="panel panel--half">
         <p class="panel-title">Personal bests</p>
-        <p class="panel-sub">Your fastest recorded times at each distance, pulled directly from your run history</p>
+        <p class="panel-sub">Your fastest recorded times at each distance, all-time (not affected by filters above)</p>
         <div class="predict-grid">
           <div class="predict-card">
             <p class="predict-label">5K</p>

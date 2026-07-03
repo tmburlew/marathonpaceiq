@@ -214,7 +214,7 @@ function renderAll() {
   renderStats(runs);
   renderRunsTable(runs);
   renderPredictions(runs);
-  renderPersonalBests(runs);
+  renderPersonalBests(allRuns); // always all-time PRs, independent of active filters
   renderTrainingLoad(runs);
   renderEffortMix(runs);
   renderTrendChart(runs);
