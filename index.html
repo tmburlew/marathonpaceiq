@@ -42,6 +42,45 @@
         <span id="sync-status" class="sync-status"></span>
       </div>
 
+      <div class="filters-row">
+        <div class="filter-field">
+          <label for="filter-range">Time range</label>
+          <select id="filter-range">
+            <option value="all">All time</option>
+            <option value="30d">Last 30 days</option>
+            <option value="90d">Last 90 days</option>
+            <option value="365d">Last 365 days</option>
+            <option value="custom">Custom range…</option>
+          </select>
+        </div>
+        <div class="filter-field filter-field--dates" id="custom-range-fields" hidden>
+          <label for="filter-start">From</label>
+          <input type="date" id="filter-start" />
+          <label for="filter-end">To</label>
+          <input type="date" id="filter-end" />
+        </div>
+        <div class="filter-field">
+          <label for="filter-distance">Distance</label>
+          <select id="filter-distance">
+            <option value="all">All distances</option>
+            <option value="short">Short (&lt; 6 mi)</option>
+            <option value="medium">Medium (6–13 mi)</option>
+            <option value="long">Long (13–20 mi)</option>
+            <option value="ultra">Ultra (20+ mi)</option>
+          </select>
+        </div>
+        <div class="filter-field">
+          <label for="filter-effort">Effort</label>
+          <select id="filter-effort">
+            <option value="all">All runs</option>
+            <option value="easy">Easy only</option>
+            <option value="hard">Tempo/threshold+ only</option>
+          </select>
+        </div>
+        <button id="filter-reset" class="filter-reset" type="button">Reset</button>
+      </div>
+      <p class="filter-summary" id="filter-summary"></p>
+
       <div class="stat-row">
         <div class="stat-card">
           <p class="stat-label">Runs synced</p>

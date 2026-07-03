@@ -15,6 +15,34 @@ const syncBtn = document.getElementById("sync-btn");
 const syncStatus = document.getElementById("sync-status");
 
 let trendChartInstance = null;
+let allRuns = [];
+
+const filterRange = document.getElementById("filter-range");
+const filterDistance = document.getElementById("filter-distance");
+const filterEffort = document.getElementById("filter-effort");
+const filterStart = document.getElementById("filter-start");
+const filterEnd = document.getElementById("filter-end");
+const customRangeFields = document.getElementById("custom-range-fields");
+const filterReset = document.getElementById("filter-reset");
+const filterSummary = document.getElementById("filter-summary");
+
+filterRange.addEventListener("change", () => {
+  customRangeFields.hidden = filterRange.value !== "custom";
+  renderAll();
+});
+filterDistance.addEventListener("change", renderAll);
+filterEffort.addEventListener("change", renderAll);
+filterStart.addEventListener("change", renderAll);
+filterEnd.addEventListener("change", renderAll);
+filterReset.addEventListener("click", () => {
+  filterRange.value = "all";
+  filterDistance.value = "all";
+  filterEffort.value = "all";
+  filterStart.value = "";
+  filterEnd.value = "";
+  customRangeFields.hidden = true;
+  renderAll();
+});
 
 connectBtn.addEventListener("click", () => {
   const authUrl = `https://www.strava.com/oauth/authorize` +
@@ -81,23 +109,17 @@ async function loadDashboard() {
     if (!response.ok) throw new Error("activities_fetch_failed");
 
     const activities = await response.json();
-    const runs = activities.filter(a => a.type === "Run" && a.distance > 0);
+    allRuns = activities.filter(a => a.type === "Run" && a.distance > 0);
 
     connectSection.hidden = true;
     dashboardSection.hidden = false;
     statusPill.textContent = "Connected";
     statusPill.className = "status-pill status-pill--online";
 
-    renderStats(runs);
-    renderRunsTable(runs);
-    renderPredictions(runs);
-    renderPersonalBests(runs);
-    renderTrainingLoad(runs);
-    renderEffortMix(runs);
-    renderTrendChart(runs);
-    renderHeatmap(runs);
+    populateYearOptions(allRuns);
+    renderAll();
 
-    if (runs.length === 0) {
+    if (allRuns.length === 0) {
       syncStatus.textContent = "Connected, but no synced runs yet. Click \"Sync Strava data\" to pull your history.";
     }
 
@@ -105,6 +127,98 @@ async function loadDashboard() {
   } catch (err) {
     return false;
   }
+}
+
+// ---------- Filters ----------
+
+function populateYearOptions(runs) {
+  filterRange.querySelectorAll("option[data-year]").forEach(o => o.remove());
+
+  const years = [...new Set(runs.map(r => new Date(r.start_date).getFullYear()))]
+    .sort((a, b) => b - a);
+  const customOption = filterRange.querySelector('option[value="custom"]');
+
+  years.forEach(year => {
+    const opt = document.createElement("option");
+    opt.value = String(year);
+    opt.textContent = String(year);
+    opt.dataset.year = "true";
+    filterRange.insertBefore(opt, customOption);
+  });
+}
+
+function getDistanceBucket(distanceMeters) {
+  const miles = distanceMeters / 1609.34;
+  if (miles < 6) return "short";
+  if (miles < 13) return "medium";
+  if (miles < 20) return "long";
+  return "ultra";
+}
+
+function applyFilters(runs) {
+  let filtered = runs;
+  const range = filterRange.value;
+
+  if (range === "30d" || range === "90d" || range === "365d") {
+    const days = { "30d": 30, "90d": 90, "365d": 365 }[range];
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+    filtered = filtered.filter(r => new Date(r.start_date) >= cutoff);
+  } else if (range === "custom") {
+    if (filterStart.value) {
+      const start = new Date(filterStart.value);
+      filtered = filtered.filter(r => new Date(r.start_date) >= start);
+    }
+    if (filterEnd.value) {
+      const end = new Date(filterEnd.value);
+      end.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(r => new Date(r.start_date) <= end);
+    }
+  } else if (range !== "all") {
+    const year = parseInt(range, 10);
+    filtered = filtered.filter(r => new Date(r.start_date).getFullYear() === year);
+  }
+
+  if (filterDistance.value !== "all") {
+    filtered = filtered.filter(r => getDistanceBucket(r.distance) === filterDistance.value);
+  }
+
+  if (filterEffort.value !== "all") {
+    // Threshold is anchored to your all-time best effort, not the filtered
+    // set, so "hard" keeps the same meaning no matter what range is selected.
+    const best = findBestPredictorRun(allRuns);
+    if (best) {
+      const thresholdPaceSecPerMile = best.moving_time / (best.distance / 1609.34);
+      const hardCutoff = thresholdPaceSecPerMile * 1.15;
+      filtered = filtered.filter(r => {
+        const pace = r.moving_time / (r.distance / 1609.34);
+        const isHard = pace <= hardCutoff;
+        return filterEffort.value === "hard" ? isHard : !isHard;
+      });
+    }
+  }
+
+  return filtered;
+}
+
+function updateFilterSummary(filteredCount, totalCount) {
+  filterSummary.textContent = filteredCount === totalCount
+    ? `Showing all ${totalCount} synced runs.`
+    : `Showing ${filteredCount} of ${totalCount} synced runs.`;
+}
+
+function renderAll() {
+  const runs = applyFilters(allRuns);
+  updateFilterSummary(runs.length, allRuns.length);
+
+  renderStats(runs);
+  renderRunsTable(runs);
+  renderPredictions(runs);
+  renderPersonalBests(runs);
+  renderTrainingLoad(runs);
+  renderEffortMix(runs);
+  renderTrendChart(runs);
+  renderHeatmap(runs);
 }
 
 // ---------- Stats ----------
@@ -381,7 +495,7 @@ function renderTrendChart(runs) {
         },
         {
           type: "line",
-          label: "Avg pace (sec/mi)",
+          label: "Avg pace (min/mi)",
           data: weeks.map(w => w.avgPaceSecPerMile),
           borderColor: "#fc4c02",
           backgroundColor: "#fc4c02",
@@ -404,11 +518,33 @@ function renderTrendChart(runs) {
           position: "right",
           reverse: true,
           grid: { drawOnChartArea: false },
-          title: { display: true, text: "Pace (sec/mi)" }
+          title: { display: true, text: "Pace (min/mi)" },
+          ticks: {
+            callback: (value) => secPerMileToMinSec(value)
+          }
+        }
+      },
+      plugins: {
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              if (ctx.dataset.yAxisID === "y1") {
+                return `Avg pace: ${secPerMileToMinSec(ctx.parsed.y)} /mi`;
+              }
+              return `Weekly miles: ${ctx.parsed.y}`;
+            }
+          }
         }
       }
     }
   });
+}
+
+function secPerMileToMinSec(secPerMile) {
+  if (secPerMile === null || secPerMile === undefined) return "—";
+  const min = Math.floor(secPerMile / 60);
+  const sec = Math.round(secPerMile % 60);
+  return `${min}:${String(sec).padStart(2, "0")}`;
 }
 
 // ---------- Consistency heatmap ----------
